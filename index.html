@@ -90,7 +90,15 @@
   .fina { flex-wrap: nowrap; }
   .fina input { flex: 1; min-width: 0; }
   .fina output { font: 500 15px var(--fonte-tc); color: var(--ambar); min-width: 4.2em; text-align: right; font-variant-numeric: tabular-nums; }
-  .info { color: var(--suave); font-size: 12.5px; min-width: 0; }
+  .info { flex: 1; color: var(--suave); font-size: 12.5px; min-width: 0; }
+  .linha-info { flex-wrap: nowrap; }
+  .segmento { display: inline-flex; flex-shrink: 0; }
+  .segmento button { border-radius: 0; min-width: 44px; }
+  .segmento button:first-child { border-radius: 8px 0 0 8px; }
+  .segmento button:last-child { border-radius: 0 8px 8px 0; border-left: 0; }
+  #mais { position: relative; min-width: 44px; font-size: 18px; letter-spacing: 1px; }
+  #mais.com-trecho::after { content: ""; position: absolute; top: 6px; right: 6px; width: 7px; height: 7px;
+                           border-radius: 50%; background: var(--ambar); }
   .extras button { flex: 1 1 auto; }
   .marca { font-family: var(--fonte-tc); font-variant-numeric: tabular-nums; font-size: 12px; color: var(--suave); }
   @media (prefers-reduced-motion: reduce) { .camada { transition: none; } }
@@ -135,27 +143,34 @@
       <button id="voltaQ" aria-label="Voltar um quadro">◀︎ quadro</button>
       <button id="play" class="primario play" aria-label="Tocar">▶︎</button>
       <button id="avancaQ" aria-label="Avançar um quadro">quadro ▶︎</button>
+      <button id="mais" aria-expanded="false" aria-controls="extras" aria-label="Mais opções: trecho e som">⋯</button>
     </div>
 
     <div class="chips" role="group" aria-label="Velocidade">
-      <button data-vel="1">1x</button>
-      <button data-vel="0.5">0,5x</button>
-      <button data-vel="0.25">0,25x</button>
-      <button data-vel="0.1">0,1x</button>
-      <button data-vel="0.05">0,05x</button>
+      <button data-i="0">1x</button>
+      <button data-i="1">0,5x</button>
+      <button data-i="2">0,25x</button>
+      <button data-i="3">0,1x</button>
+      <button data-i="4">0,05x</button>
     </div>
 
     <div class="linha fina">
       <input id="vel" type="range" min="0" max="1000" step="1" aria-label="Velocidade fina">
       <output id="velTxt" for="vel">0,25x</output>
+      <span class="segmento" role="group" aria-label="Unidade da velocidade">
+        <button class="pequeno" id="emX" aria-pressed="true">x</button>
+        <button class="pequeno" id="emQps" aria-pressed="false">qps</button>
+      </span>
     </div>
-    <div class="info" id="info">1 s do vídeo leva 4 s na tela</div>
+    <div class="linha linha-info">
+      <div class="info" id="info">1 s do vídeo leva 4 s na tela</div>
+      <button class="pequeno" id="suave" aria-pressed="true">Suavizar</button>
+    </div>
 
-    <div class="linha extras">
+    <div class="linha extras" id="extras" hidden>
       <button id="marcaA">Início <span class="marca" id="txtA">—</span></button>
       <button id="marcaB">Fim <span class="marca" id="txtB">—</span></button>
       <button id="loop" aria-pressed="false">Repetir trecho</button>
-      <button id="suave" aria-pressed="true">Suavizar</button>
       <button id="som" aria-pressed="false">Som</button>
     </div>
   </section>
@@ -166,7 +181,7 @@
   "use strict";
   var $ = function (s) { return document.querySelector(s); };
   var video = $("#video"), tela = $("#tela"), ctx = tela.getContext("2d");
-  var VEL_MIN = 0.05, VEL_MAX = 1, LIMIAR = 0.25;   // abaixo do limiar o app monta os quadros ele mesmo
+  var VEL_MIN = 0.01, VEL_MAX = 1, LIMIAR = 0.25;   // abaixo do limiar o app monta os quadros ele mesmo
   var LADO_MAX = 2048;                               // resolução máxima dos quadros guardados
 
   function guarda(k, v) { try { localStorage.setItem("cl_" + k, JSON.stringify(v)); } catch (e) {} }
@@ -174,6 +189,9 @@
 
   var vel = Math.min(VEL_MAX, Math.max(VEL_MIN, Number(le("vel", 0.25)) || 0.25));
   var suave = le("suave", true) !== false;
+  var unidade = le("unidade", "x") === "qps" ? "qps" : "x";   // velocidade em "x" ou em quadros por segundo
+  var qpsAlvo = Number(le("qps", 5)) || 5;
+  var CHIPS = { x: [1, 0.5, 0.25, 0.1, 0.05], qps: [15, 10, 5, 2, 1] };
   var fd = 1 / 30, fpsMedido = false;          // duração de um quadro do vídeo
   var tocando = false, modo = "nativo";         // "nativo" (o navegador toca) ou "passo" (quadro a quadro, com mistura)
   var vt = 0;                                   // tempo do vídeo no modo passo
@@ -181,7 +199,7 @@
   var B = { n: -1, ok: false, c: document.createElement("canvas") };
   var ocupado = false, sujo = true, pronto = false;
   var trecho = { a: null, b: null, ativo: false };
-  var urlAtual = null;
+  var urlAtual = null, ultimoTxt = "";
 
   // ---------------------------------------------------------------- utilidades
   function dur() { return isFinite(video.duration) ? video.duration : 0; }
@@ -253,6 +271,7 @@
 
   // ---------------------------------------------------------------- modos e transporte
   function aplicaModo() {
+    if (!pronto) return;   // ainda medindo o vídeo: o modo é aplicado quando terminar
     var novo = vel >= LIMIAR - 1e-6 ? "nativo" : "passo";
     var t = tempoAtual();
     if (novo !== modo) {
@@ -299,18 +318,42 @@
   // ---------------------------------------------------------------- velocidade
   function velDeSlider(x) { return Math.exp(Math.log(VEL_MIN) + (x / 1000) * (Math.log(VEL_MAX) - Math.log(VEL_MIN))); }
   function sliderDeVel(v) { return Math.round(1000 * (Math.log(v) - Math.log(VEL_MIN)) / (Math.log(VEL_MAX) - Math.log(VEL_MIN))); }
+  function fpsVideo() { return 1 / fd; }
+  function fmtNum(n) { return (n < 10 ? (Math.round(n * 10) / 10).toString() : Math.round(n).toString()).replace(".", ","); }
+  function qpsAtual() { return vel * fpsVideo(); }
   function defineVel(v, doSlider) {
     vel = Math.min(VEL_MAX, Math.max(VEL_MIN, v));
     if (!doSlider) $("#vel").value = sliderDeVel(vel);
-    $("#velTxt").textContent = fmtVel(vel);
-    var seg = 1 / vel;
-    $("#info").textContent = vel >= 0.995 ? "Velocidade normal" :
-      "1 s do vídeo leva " + (seg < 10 ? seg.toFixed(1).replace(".", ",").replace(",0", "") : Math.round(seg)) + " s na tela";
+    var seg = 1 / vel, q = qpsAtual();
+    var leva = vel >= 0.995 ? "velocidade normal" : "1 s do vídeo leva " + fmtNum(seg) + " s na tela";
+    if (unidade === "qps") {
+      $("#velTxt").textContent = fmtNum(q) + " qps";
+      $("#info").textContent = fmtVel(vel) + " · " + leva;
+    } else {
+      $("#velTxt").textContent = fmtVel(vel);
+      $("#info").textContent = (vel >= 0.995 ? "Velocidade normal" : "1 s do vídeo leva " + fmtNum(seg) + " s na tela") +
+        " · " + fmtNum(q) + " quadros por segundo";
+    }
     document.querySelectorAll(".chips button").forEach(function (b) {
-      b.setAttribute("aria-pressed", Math.abs(Number(b.dataset.vel) - vel) < vel * 0.02 ? "true" : "false");
+      var alvo = CHIPS[unidade][Number(b.dataset.i)], atual = unidade === "qps" ? q : vel;
+      b.setAttribute("aria-pressed", Math.abs(alvo - atual) < alvo * 0.02 ? "true" : "false");
     });
     guarda("vel", vel);
     aplicaModo();
+  }
+  function montaChips() {
+    document.querySelectorAll(".chips button").forEach(function (b) {
+      var v = CHIPS[unidade][Number(b.dataset.i)];
+      b.textContent = unidade === "qps" ? v + " qps" : fmtVel(v);
+      b.disabled = unidade === "qps" && v > fpsVideo() + 0.5;   // não dá para mostrar mais quadros do que o vídeo tem
+    });
+    $("#emX").setAttribute("aria-pressed", unidade === "x" ? "true" : "false");
+    $("#emQps").setAttribute("aria-pressed", unidade === "qps" ? "true" : "false");
+  }
+  function trocaUnidade(u) {
+    unidade = u; guarda("unidade", u);
+    if (u === "qps") qpsAlvo = qpsAtual();
+    montaChips(); defineVel(vel);
   }
 
   // ---------------------------------------------------------------- trecho (loop)
@@ -318,47 +361,64 @@
     $("#txtA").textContent = trecho.a === null ? "—" : fmt(trecho.a);
     $("#txtB").textContent = trecho.b === null ? "—" : fmt(trecho.b);
     $("#loop").setAttribute("aria-pressed", trecho.ativo ? "true" : "false");
+    $("#mais").classList.toggle("com-trecho", trecho.ativo);
     var f = $("#faixa");
     if (trecho.a !== null && trecho.b !== null && dur() > 0) {
       f.hidden = false; f.style.left = (100 * trecho.a / dur()) + "%"; f.style.width = (100 * (trecho.b - trecho.a) / dur()) + "%";
     } else f.hidden = true;
   }
 
-  // ---------------------------------------------------------------- medir quadros por segundo
-  var amostras = [], ultimoMedia = null;
-  function medeQuadro(_, meta) {
-    if (ultimoMedia !== null) {
-      var d = meta.mediaTime - ultimoMedia;
-      if (d > 1 / 130 && d < 1 / 8) amostras.push(d);
-    }
-    ultimoMedia = meta.mediaTime;
-    if (amostras.length >= 8 && !fpsMedido) {
-      var s = amostras.slice().sort(function (a, b) { return a - b; });
-      var fps = Math.round(1 / s[Math.floor(s.length / 2)]);
-      if (fps >= 10 && fps <= 120) { fd = 1 / fps; fpsMedido = true; sujo = true; }
-    }
-    if (!fpsMedido && !video.paused && modo === "nativo") video.requestVideoFrameCallback(medeQuadro);
+  // ---------------------------------------------------------------- medir quadros por segundo do vídeo
+  // toca um instante sem som, conta os quadros que aparecem e volta ao início
+  function sondaFps() {
+    return new Promise(function (ok) {
+      if (!video.requestVideoFrameCallback) return ok();
+      var mudo = video.muted, acabou = false, ult = null, am = [];
+      var acaba = function () {
+        if (acabou) return; acabou = true; clearTimeout(limite);
+        video.pause(); video.muted = mudo;
+        if (am.length >= 4) {
+          am.sort(function (a, b) { return a - b; });
+          var fps = Math.round(1 / am[Math.floor(am.length / 2)]);
+          if (fps >= 10 && fps <= 120) { fd = 1 / fps; fpsMedido = true; }
+        }
+        ok();
+      };
+      var cb = function (_, meta) {
+        if (acabou) return;
+        if (ult !== null) { var d = meta.mediaTime - ult; if (d > 1 / 130 && d < 1 / 8) am.push(d); }
+        ult = meta.mediaTime;
+        if (am.length >= 8) acaba(); else video.requestVideoFrameCallback(cb);
+      };
+      var limite = setTimeout(acaba, 1200);
+      video.muted = true;
+      try { video.playbackRate = 1; } catch (e) {}
+      video.requestVideoFrameCallback(cb);
+      video.play().catch(acaba);
+    });
   }
-  video.addEventListener("play", function () {
-    if (fpsMedido || !video.requestVideoFrameCallback) return;
-    ultimoMedia = null; video.requestVideoFrameCallback(medeQuadro);
-  });
 
   // ---------------------------------------------------------------- abrir vídeo
   function abre(src, nome) {
     pausar(); pronto = false; aviso("");
     A.n = B.n = -1; A.ok = B.ok = false; vt = 0;
     trecho = { a: null, b: null, ativo: false }; atualizaTrecho();
-    fpsMedido = false; fd = 1 / 30; amostras = [];
+    fpsMedido = false; fd = 1 / 30;
     $("#nome").textContent = nome;
+    $("#selo").textContent = "Preparando o vídeo…"; ultimoTxt = "";
     modo = "nativo"; tela.hidden = true; video.classList.remove("oculto");
     video.src = src; video.load();
   }
   video.addEventListener("loadedmetadata", function () {
-    pronto = true;
     tamanhoQuadro(A.c); tamanhoQuadro(B.c);
     $("#total").textContent = fmt(dur());
-    zera(); defineVel(vel); irPara(0); atualizaTrecho();
+    zera(); atualizaTrecho();
+    sondaFps().then(function () {
+      pronto = true;
+      montaChips();
+      defineVel(unidade === "qps" ? qpsAlvo / fpsVideo() : vel);
+      irPara(0);
+    });
   });
   video.addEventListener("error", function () {
     pronto = false;
@@ -460,9 +520,22 @@
   $("#voltaQ").addEventListener("click", function () { passoQuadro(-1); });
   $("#avancaQ").addEventListener("click", function () { passoQuadro(1); });
   document.querySelectorAll(".chips button").forEach(function (b) {
-    b.addEventListener("click", function () { defineVel(Number(b.dataset.vel)); });
+    b.addEventListener("click", function () {
+      var v = CHIPS[unidade][Number(b.dataset.i)];
+      if (unidade === "qps") { qpsAlvo = v; guarda("qps", v); defineVel(v / fpsVideo()); } else defineVel(v);
+    });
   });
-  $("#vel").addEventListener("input", function (e) { defineVel(velDeSlider(Number(e.target.value)), true); });
+  $("#vel").addEventListener("input", function (e) {
+    defineVel(velDeSlider(Number(e.target.value)), true);
+    if (unidade === "qps") { qpsAlvo = qpsAtual(); guarda("qps", qpsAlvo); }
+  });
+  $("#emX").addEventListener("click", function () { trocaUnidade("x"); });
+  $("#emQps").addEventListener("click", function () { trocaUnidade("qps"); });
+  function mostraExtras(sim) {
+    $("#extras").hidden = !sim; $("#mais").setAttribute("aria-expanded", sim ? "true" : "false");
+    $("#mais").setAttribute("aria-pressed", sim ? "true" : "false"); guarda("extras", sim);
+  }
+  $("#mais").addEventListener("click", function () { mostraExtras($("#extras").hidden); });
   $("#posicao").addEventListener("input", function (e) { irPara(Number(e.target.value) / 1000 * dur()); });
   $("#marcaA").addEventListener("click", function () {
     trecho.a = tempoAtual();
@@ -497,7 +570,7 @@
   });
 
   // ---------------------------------------------------------------- laço principal
-  var ultimo = performance.now(), ultimoTxt = "";
+  var ultimo = performance.now();
   function laco(agora) {
     var dt = Math.min((agora - ultimo) / 1000, 0.1); ultimo = agora;
     if (pronto && modo === "passo") {
@@ -522,8 +595,8 @@
       var t = tempoAtual();
       $("#agora").textContent = fmt(t);
       if (document.activeElement !== $("#posicao")) $("#posicao").value = dur() ? Math.round(1000 * t / dur()) : 0;
-      var resto = (modo === "passo" && suave ? " · suavizado" : "") +
-        " · quadro " + (Math.floor(t / fd + 1e-6) + 1) + (fpsMedido ? " · " + Math.round(1 / fd) + " qps" : "");
+      var resto = " · " + fmtNum(qpsAtual()) + " qps · quadro " + (Math.floor(t / fd + 1e-6) + 1) +
+        (fpsMedido ? " · vídeo de " + Math.round(fpsVideo()) + " qps" : "");
       var txt = fmtVel(vel) + resto;
       if (txt !== ultimoTxt) { $("#selo").innerHTML = "<b>" + fmtVel(vel) + "</b>" + resto; ultimoTxt = txt; }
     }
@@ -531,6 +604,8 @@
   }
 
   $("#suave").setAttribute("aria-pressed", suave ? "true" : "false");
+  mostraExtras(le("extras", false) === true);
+  montaChips();
   defineVel(vel);
   abre("exemplo.mp4", "Exemplo: caneta escrevendo");
   requestAnimationFrame(laco);

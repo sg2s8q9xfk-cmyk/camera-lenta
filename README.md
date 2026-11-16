@@ -10,10 +10,11 @@ Assista vídeos do celular em câmera lenta (de 1x até 0,05x), sem enviar nada 
 
 ## Recursos
 
-- Velocidades rápidas (1x, 0,5x, 0,25x, 0,1x, 0,05x) e ajuste fino.
+- Velocidade em **x** (1x, 0,5x, 0,25x, 0,1x, 0,05x) ou em **quadros por segundo** (15, 10, 5, 2, 1 qps), com ajuste fino.
+  O app mede sozinho quantos quadros por segundo o vídeo tem.
 - Abaixo de 0,25x o app monta os quadros ele mesmo e mistura um quadro com o próximo (**Suavizar**), para o movimento não ficar travado.
 - Avançar e voltar quadro a quadro.
-- **Início / Fim / Repetir trecho**: repete só uma parte do vídeo.
+- **Início / Fim / Repetir trecho** e **Som** ficam no botão ⋯: repete só uma parte do vídeo.
 - Vídeo em tela cheia; um toque esconde ou mostra os controles.
 - Pinça para dar zoom e arrastar; toque duplo volta ao normal.
 - Teclado (no computador): espaço toca/pausa, setas mudam de quadro.
