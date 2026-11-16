@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Câmera Lenta">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#0f1214">
+<meta name="theme-color" content="#000000">
 <link rel="apple-touch-icon" href="icone-180.png">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 <link rel="manifest" href="manifest.webmanifest">
@@ -16,57 +16,64 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap">
 <style>
-  /* Tela única de mesa de edição: o vídeo no centro, controles de reprodução embaixo. Visual escuro de propósito. */
+  /* Player em tela cheia: o vídeo ocupa tudo; título e controles flutuam por cima, semitransparentes. Visual escuro de propósito. */
   :root {
     --fundo: #0f1214;
-    --superficie: #181d21;
-    --linha: #2b3238;
-    --texto: #e8ecee;
-    --suave: #8e9aa2;
+    --texto: #f1f4f5;
+    --suave: #b4bec4;
     --ambar: #f0b43c;
-    --ambar-fundo: rgba(240, 180, 60, 0.18);
-    --tela: #070909;
-    --vidro: rgba(15, 18, 20, 0.74);
+    --ambar-fundo: rgba(240, 180, 60, 0.22);
+    --tela: #000000;
+    --sombra: rgba(4, 6, 7, 0.82);
+    --vidro: rgba(255, 255, 255, 0.10);
+    --vidro-borda: rgba(255, 255, 255, 0.20);
     --fonte-ui: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
     --fonte-tc: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
     color-scheme: dark;
   }
   [hidden] { display: none !important; }
-  html, body { height: 100%; }
-  body { background: var(--fundo); color: var(--texto); font: 15px/1.4 var(--fonte-ui); overflow: hidden;
-         -webkit-tap-highlight-color: transparent; }
-  .app { height: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: 10px;
-         padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
-         padding-block: 10px; }
+  html, body { height: 100%; overflow: hidden; }
+  body { background: var(--tela); color: var(--texto); font: 15px/1.4 var(--fonte-ui); -webkit-tap-highlight-color: transparent; }
 
-  .topo { display: flex; align-items: center; gap: 12px; min-width: 0; }
-  .topo h1 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; }
-  .nome { flex: 1; min-width: 0; color: var(--suave); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-  button, .botao { font: 500 14px var(--fonte-ui); color: var(--texto); background: var(--superficie);
-                   border: 1px solid var(--linha); border-radius: 8px; min-height: 38px; padding: 0 12px;
-                   display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;
-                   touch-action: manipulation; user-select: none; -webkit-user-select: none; }
-  button:hover, .botao:hover { border-color: var(--suave); }
-  button:focus-visible, .botao:focus-within, input:focus-visible { outline: 2px solid var(--ambar); outline-offset: 2px; }
-  button:disabled { opacity: 0.4; cursor: default; }
-  .primario { background: var(--ambar); border-color: var(--ambar); color: var(--fundo); font-weight: 600; white-space: nowrap; }
-  .primario:hover { border-color: var(--texto); }
-  button[aria-pressed="true"] { background: var(--ambar-fundo); border-color: var(--ambar); color: var(--ambar); }
-
-  .palco { position: relative; flex: 1; min-height: 0; background: var(--tela); border-radius: 10px; overflow: hidden;
-           touch-action: none; }
+  /* vídeo em tela cheia */
+  .palco { position: fixed; inset: 0; background: var(--tela); overflow: hidden; touch-action: none; }
   .quadro { position: absolute; inset: 0; transform-origin: 50% 50%; will-change: transform; }
   .quadro video, .quadro canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; }
   .quadro video.oculto { opacity: 0; }
-  .selo { position: absolute; top: 10px; left: 10px; padding: 4px 8px; border-radius: 6px; background: var(--vidro);
-          font: 500 12px var(--fonte-tc); font-variant-numeric: tabular-nums; pointer-events: none; }
-  .selo b { color: var(--ambar); font-weight: 500; }
-  .zoom { position: absolute; top: 10px; right: 10px; min-height: 30px; padding: 0 10px; font-size: 12px; background: var(--vidro); }
-  .aviso { position: absolute; left: 12px; right: 12px; bottom: 12px; margin: 0; padding: 10px 12px; border-radius: 8px;
-           background: var(--vidro); border: 1px solid var(--linha); font-size: 13.5px; }
+  .aviso { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(340px, calc(100% - 48px));
+           margin: 0; padding: 12px 14px; border-radius: 10px; background: var(--sombra); border: 1px solid var(--vidro-borda);
+           font-size: 14px; text-align: center; }
 
-  .controles { display: flex; flex-direction: column; gap: 10px; }
+  /* camadas por cima do vídeo */
+  .camada { position: fixed; left: 0; right: 0; z-index: 2; display: flex; flex-direction: column; gap: 8px;
+            padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6); transition: opacity 0.25s ease; }
+  .topo { top: 0; padding-top: calc(env(safe-area-inset-top, 0px) + 10px); padding-bottom: 34px;
+          background: linear-gradient(to bottom, var(--sombra), rgba(4, 6, 7, 0)); }
+  .controles { bottom: 0; padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); padding-top: 40px;
+               background: linear-gradient(to top, var(--sombra) 60%, rgba(4, 6, 7, 0)); }
+  .app.limpo .camada { opacity: 0; pointer-events: none; }
+
+  .titulo { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .titulo h1 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; }
+  .nome { flex: 1; min-width: 0; color: var(--suave); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .status { display: flex; align-items: center; gap: 8px; min-height: 28px; }
+  .selo { flex: 1; min-width: 0; font: 500 12px var(--fonte-tc); font-variant-numeric: tabular-nums; color: var(--suave);
+          overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .selo b { color: var(--ambar); font-weight: 500; }
+
+  button, .botao { font: 500 14px var(--fonte-ui); color: var(--texto); background: var(--vidro);
+                   border: 1px solid var(--vidro-borda); border-radius: 8px; min-height: 38px; padding: 0 12px;
+                   display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;
+                   -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); text-shadow: none;
+                   touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+  button:hover, .botao:hover { border-color: var(--suave); }
+  button:focus-visible, .botao:focus-within, input:focus-visible { outline: 2px solid var(--ambar); outline-offset: 2px; }
+  .primario { background: var(--ambar); border-color: var(--ambar); color: var(--fundo); font-weight: 600; white-space: nowrap; }
+  .primario:hover { border-color: var(--texto); }
+  button[aria-pressed="true"] { background: var(--ambar-fundo); border-color: var(--ambar); color: var(--ambar); }
+  .pequeno { min-height: 28px; padding: 0 10px; font-size: 12px; }
+
   .linha { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .tempo { flex-wrap: nowrap; }
   .tc { font: 500 13px var(--fonte-tc); font-variant-numeric: tabular-nums; color: var(--suave); white-space: nowrap; }
@@ -86,31 +93,35 @@
   .info { color: var(--suave); font-size: 12.5px; min-width: 0; }
   .extras button { flex: 1 1 auto; }
   .marca { font-family: var(--fonte-tc); font-variant-numeric: tabular-nums; font-size: 12px; color: var(--suave); }
-  @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } }
+  @media (prefers-reduced-motion: reduce) { .camada { transition: none; } }
 </style>
 
-<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box}body{margin:0}</style>
+<style>body{margin:0}</style>
 </head>
 <body>
-<div class="app">
-  <header class="topo">
-    <h1>Câmera Lenta</h1>
-    <span class="nome" id="nome">Exemplo: caneta escrevendo</span>
-    <label class="botao primario" for="arquivo">Escolher vídeo</label>
-    <input id="arquivo" type="file" accept="video/*" hidden>
-  </header>
-
-  <main class="palco" id="palco" aria-label="Vídeo (pinça para dar zoom, toque duplo para voltar)">
+<div class="app" id="app">
+  <main class="palco" id="palco" aria-label="Vídeo: toque para mostrar ou esconder os controles, pinça para zoom, toque duplo para voltar">
     <div class="quadro" id="quadro">
       <video id="video" playsinline muted preload="auto"></video>
       <canvas id="tela" hidden></canvas>
     </div>
-    <div class="selo" id="selo">—</div>
-    <button class="zoom" id="semZoom" hidden>1:1</button>
     <p class="aviso" id="aviso" hidden></p>
   </main>
 
-  <section class="controles" aria-label="Controles">
+  <header class="camada topo">
+    <div class="titulo">
+      <h1>Câmera Lenta</h1>
+      <span class="nome" id="nome">Exemplo: caneta escrevendo</span>
+      <label class="botao primario" for="arquivo">Escolher vídeo</label>
+      <input id="arquivo" type="file" accept="video/*" hidden>
+    </div>
+    <div class="status">
+      <div class="selo" id="selo">—</div>
+      <button class="pequeno" id="semZoom" hidden>Zoom</button>
+    </div>
+  </header>
+
+  <section class="camada controles" aria-label="Controles">
     <div class="linha tempo">
       <span class="tc" id="agora">0:00.00</span>
       <div class="barra">
@@ -203,15 +214,15 @@
       video.currentTime = t;
     });
   }
+  function escala() { return Math.min(1, LADO_MAX / Math.max(video.videoWidth, video.videoHeight, 1)); }
   function tamanhoQuadro(c) {
-    var w = video.videoWidth, h = video.videoHeight, k = Math.min(1, LADO_MAX / Math.max(w, h, 1));
-    c.width = Math.max(1, Math.round(w * k)); c.height = Math.max(1, Math.round(h * k));
+    c.width = Math.max(1, Math.round(video.videoWidth * escala())); c.height = Math.max(1, Math.round(video.videoHeight * escala()));
   }
   function carrega(slot) {
     var n = slot.n;
     return buscar(Math.min((n + 0.5) * fd, Math.max(0, dur() - 0.001))).then(function () {
       if (slot.n !== n || modo !== "passo") return;
-      if (slot.c.width !== Math.round(video.videoWidth * Math.min(1, LADO_MAX / Math.max(video.videoWidth, video.videoHeight, 1)))) tamanhoQuadro(slot.c);
+      if (slot.c.width !== Math.max(1, Math.round(video.videoWidth * escala()))) tamanhoQuadro(slot.c);
       slot.c.getContext("2d").drawImage(video, 0, 0, slot.c.width, slot.c.height);
       slot.ok = true; sujo = true;
     });
@@ -323,17 +334,15 @@
     ultimoMedia = meta.mediaTime;
     if (amostras.length >= 8 && !fpsMedido) {
       var s = amostras.slice().sort(function (a, b) { return a - b; });
-      var med = s[Math.floor(s.length / 2)];
-      var fps = Math.round(1 / med);
+      var fps = Math.round(1 / s[Math.floor(s.length / 2)]);
       if (fps >= 10 && fps <= 120) { fd = 1 / fps; fpsMedido = true; sujo = true; }
     }
     if (!fpsMedido && !video.paused && modo === "nativo") video.requestVideoFrameCallback(medeQuadro);
   }
-  function comecaMedida() {
+  video.addEventListener("play", function () {
     if (fpsMedido || !video.requestVideoFrameCallback) return;
     ultimoMedia = null; video.requestVideoFrameCallback(medeQuadro);
-  }
-  video.addEventListener("play", comecaMedida);
+  });
 
   // ---------------------------------------------------------------- abrir vídeo
   function abre(src, nome) {
@@ -369,9 +378,14 @@
     e.target.value = "";
   });
 
-  // ---------------------------------------------------------------- zoom e arrasto
+  // ---------------------------------------------------------------- controles visíveis ou escondidos
+  var app = $("#app");
+  function alternaControles() { app.classList.toggle("limpo"); }
+
+  // ---------------------------------------------------------------- toque, zoom e arrasto
   var palco = $("#palco"), quadro = $("#quadro");
-  var zoom = { s: 1, x: 0, y: 0 }, dedos = new Map(), gesto = null, ultimoToque = 0;
+  var zoom = { s: 1, x: 0, y: 0 }, dedos = new Map(), gesto = null;
+  var toque = null, ultimoToque = 0, esperaToque = null;
   function limitaZoom() {
     var r = palco.getBoundingClientRect(), mx = (zoom.s - 1) * r.width / 2, my = (zoom.s - 1) * r.height / 2;
     zoom.x = Math.max(-mx, Math.min(mx, zoom.x)); zoom.y = Math.max(-my, Math.min(my, zoom.y));
@@ -403,31 +417,39 @@
     aplicaZoom();
   }
   palco.addEventListener("pointerdown", function (e) {
-    if (e.target.closest("button")) return;
     palco.setPointerCapture(e.pointerId);
     dedos.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (dedos.size === 1) {
-      var agora = performance.now();
-      if (agora - ultimoToque < 300) { zera(); ultimoToque = 0; } else ultimoToque = agora;
-    }
+    toque = dedos.size === 1 ? { x: e.clientX, y: e.clientY, t: performance.now() } : null;
     iniciaGesto();
   });
   palco.addEventListener("pointermove", function (e) {
     if (!dedos.has(e.pointerId)) return;
     dedos.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (toque && Math.hypot(e.clientX - toque.x, e.clientY - toque.y) > 10) toque = null;
     if (gesto && (gesto.n > 1 || zoom.s > 1)) moveGesto();
   });
-  function soltou(e) { dedos.delete(e.pointerId); iniciaGesto(); }
+  function soltou(e) {
+    var foiToque = toque && dedos.size === 1 && performance.now() - toque.t < 350;
+    dedos.delete(e.pointerId); iniciaGesto();
+    if (!foiToque || e.type === "pointercancel") return;
+    toque = null;
+    var agora = performance.now();
+    if (agora - ultimoToque < 300) {          // toque duplo: volta o zoom
+      clearTimeout(esperaToque); ultimoToque = 0; zera();
+    } else {                                  // toque simples: mostra/esconde os controles
+      ultimoToque = agora;
+      esperaToque = setTimeout(alternaControles, 300);
+    }
+  }
   palco.addEventListener("pointerup", soltou);
   palco.addEventListener("pointercancel", soltou);
   palco.addEventListener("wheel", function (e) {
     e.preventDefault();
-    var r = palco.getBoundingClientRect();
-    gesto = { c: { x: e.clientX, y: e.clientY }, d: 0, s: zoom.s, x: zoom.x, y: zoom.y, n: 1 };
-    var s = Math.max(1, Math.min(8, zoom.s * Math.exp(-e.deltaY * 0.002))), k = s / gesto.s;
+    var r = palco.getBoundingClientRect(), s0 = zoom.s;
+    var s = Math.max(1, Math.min(8, zoom.s * Math.exp(-e.deltaY * 0.002))), k = s / s0;
     var cx = e.clientX - r.left - r.width / 2, cy = e.clientY - r.top - r.height / 2;
-    zoom.s = s; zoom.x = cx - (cx - gesto.x) * k; zoom.y = cy - (cy - gesto.y) * k;
-    gesto = null; aplicaZoom();
+    zoom.x = cx - (cx - zoom.x) * k; zoom.y = cy - (cy - zoom.y) * k; zoom.s = s;
+    aplicaZoom();
   }, { passive: false });
   ["gesturestart", "gesturechange"].forEach(function (ev) { document.addEventListener(ev, function (e) { e.preventDefault(); }); });
   $("#semZoom").addEventListener("click", zera);
@@ -471,6 +493,7 @@
     if (e.code === "Space") { e.preventDefault(); tocando ? pausar() : tocar(); }
     else if (e.code === "ArrowLeft") { e.preventDefault(); passoQuadro(-1); }
     else if (e.code === "ArrowRight") { e.preventDefault(); passoQuadro(1); }
+    else if (e.key === "h" || e.key === "H") alternaControles();
   });
 
   // ---------------------------------------------------------------- laço principal
@@ -499,9 +522,10 @@
       var t = tempoAtual();
       $("#agora").textContent = fmt(t);
       if (document.activeElement !== $("#posicao")) $("#posicao").value = dur() ? Math.round(1000 * t / dur()) : 0;
-      var txt = fmtVel(vel) + (modo === "passo" && suave ? " · suavizado" : "") +
+      var resto = (modo === "passo" && suave ? " · suavizado" : "") +
         " · quadro " + (Math.floor(t / fd + 1e-6) + 1) + (fpsMedido ? " · " + Math.round(1 / fd) + " qps" : "");
-      if (txt !== ultimoTxt) { $("#selo").innerHTML = "<b>" + fmtVel(vel) + "</b>" + txt.slice(fmtVel(vel).length); ultimoTxt = txt; }
+      var txt = fmtVel(vel) + resto;
+      if (txt !== ultimoTxt) { $("#selo").innerHTML = "<b>" + fmtVel(vel) + "</b>" + resto; ultimoTxt = txt; }
     }
     requestAnimationFrame(laco);
   }

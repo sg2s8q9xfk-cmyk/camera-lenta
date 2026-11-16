@@ -14,6 +14,7 @@ Assista vídeos do celular em câmera lenta (de 1x até 0,05x), sem enviar nada 
 - Abaixo de 0,25x o app monta os quadros ele mesmo e mistura um quadro com o próximo (**Suavizar**), para o movimento não ficar travado.
 - Avançar e voltar quadro a quadro.
 - **Início / Fim / Repetir trecho**: repete só uma parte do vídeo.
+- Vídeo em tela cheia; um toque esconde ou mostra os controles.
 - Pinça para dar zoom e arrastar; toque duplo volta ao normal.
 - Teclado (no computador): espaço toca/pausa, setas mudam de quadro.
 
