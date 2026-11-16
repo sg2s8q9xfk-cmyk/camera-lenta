@@ -1,0 +1,15 @@
+{
+  "name": "Câmera Lenta",
+  "short_name": "Câmera Lenta",
+  "description": "Assista vídeos do celular em câmera lenta, até 0,05x.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0f1214",
+  "theme_color": "#0f1214",
+  "lang": "pt-BR",
+  "icons": [
+    { "src": "icone-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icone-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
